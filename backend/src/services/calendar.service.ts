@@ -30,11 +30,20 @@ function formatEvent(event: {
   end?: { dateTime?: string | null; date?: string | null } | null;
   htmlLink?: string | null;
   hangoutLink?: string | null;
+  organizer?: { email?: string | null } | null;
+  creator?: { email?: string | null } | null;
   attendees?: Array<{
     email?: string | null;
     displayName?: string | null;
   }> | null;
 }) {
+  const accountEmail = event.organizer?.email || event.creator?.email;
+  let htmlLink = event.htmlLink ?? null;
+  if (htmlLink && accountEmail) {
+    const separator = htmlLink.includes("?") ? "&" : "?";
+    htmlLink = `${htmlLink}${separator}authuser=${encodeURIComponent(accountEmail)}`;
+  }
+
   return {
     id: event.id,
     title: event.summary ?? "(no title)",
@@ -42,8 +51,9 @@ function formatEvent(event: {
     location: event.location?.trim() || null,
     start: event.start?.dateTime ?? event.start?.date ?? null,
     end: event.end?.dateTime ?? event.end?.date ?? null,
-    htmlLink: event.htmlLink ?? null,
+    htmlLink,
     meetLink: event.hangoutLink ?? null,
+    accountEmail: accountEmail ?? null,
     attendees: (event.attendees ?? [])
       .map((person) => person.email || person.displayName)
       .filter((value): value is string => Boolean(value)),
