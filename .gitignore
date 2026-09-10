@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# Environment Variables & Secrets (CRITICAL: Never commit your API keys)
+.env
+.env*.local
+.env.production
+.env.staging
+backend/.env
+frontend/.env
+
+# Next.js & TypeScript Build Outputs
+.next/
+out/
+build/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Mastra AI Memory & Local Databases
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+mastra.db
+backend/mastra.db
+postgres_data/
+
+# OS / Editor temporary files
+.DS_Store
+Thumbs.db
+*.pem
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Caches & Logs
+*.log
+.turbo/
+.vercel/
+coverage/
