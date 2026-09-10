@@ -19,6 +19,8 @@ declare module "lucide-react" {
   export const RefreshCcw: Icon;
   export const RefreshCw: Icon;
   export const Check: Icon;
+  export const CheckCircle2: Icon;
+  export const Video: Icon;
   export const Copy: Icon;
   export const AlertCircle: Icon;
   export const ExternalLink: Icon;
