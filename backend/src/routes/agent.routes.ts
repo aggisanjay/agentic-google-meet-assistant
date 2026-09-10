@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { requireSession } from "../middleware/requireSession.js";
 import {
+  deleteUserThread,
   getThreadMessages,
   listUserThreads,
   streamAgentReply,
@@ -42,6 +43,24 @@ agentRoutes.get("/threads/:threadId", async (req, res) => {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "failed to list threads";
+    res.status(500).json({ error: message });
+  }
+});
+
+agentRoutes.delete("/threads/:threadId", async (req, res) => {
+  const parsed = threadIdSchema.safeParse(req.params.threadId);
+
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid threadId" });
+    return;
+  }
+
+  try {
+    await deleteUserThread(req.auth!.authUserId, parsed.data);
+    res.json({ success: true, threadId: parsed.data });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "failed to delete thread";
     res.status(500).json({ error: message });
   }
 });

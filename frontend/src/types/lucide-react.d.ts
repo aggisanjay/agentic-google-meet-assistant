@@ -13,6 +13,8 @@ declare module "lucide-react" {
   export const LoaderCircle: Icon;
   export const MessageSquarePlus: Icon;
   export const Sparkles: Icon;
+  export const Trash2: Icon;
+  export const Trash: Icon;
   export const LogOut: Icon;
   export const Calendar: Icon;
   export const CalendarDays: Icon;

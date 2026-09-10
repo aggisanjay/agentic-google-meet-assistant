@@ -133,6 +133,24 @@ export async function getThreadMessages(
   return messages;
 }
 
+export async function deleteUserThread(
+  authUserId: string,
+  threadId: string,
+): Promise<void> {
+  const memory = createAgentMemory();
+
+  const thread = await memory.getThreadById({
+    threadId,
+    resourceId: authUserId,
+  });
+
+  if (!thread || thread.resourceId !== authUserId) {
+    throw new Error("Thread not found");
+  }
+
+  await memory.deleteThread(threadId);
+}
+
 export async function streamAgentReply(input: StreamAgentReplyInput) {
   if (!process.env.GOOGLE_API_KEY && process.env.GOOGLE_GEMINI_API_KEY) {
     process.env.GOOGLE_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;

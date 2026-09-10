@@ -5,6 +5,7 @@ import {
   LoaderCircle,
   MessageSquarePlus,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import {
   FormEvent,
@@ -18,6 +19,7 @@ import {
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import {
+  deleteThread,
   listThreads,
   loadThread,
   streamAgentChat,
@@ -147,6 +149,7 @@ function ChatPanel({ sessionToken, connections, footer }: Props) {
   const [prompt, setPrompt] = useState("");
   const [running, setRunning] = useState(false);
   const [loadingThread, setLoadingThread] = useState(false);
+  const [deletingThreadId, setDeletingThreadId] = useState<string | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
 
   const showEmpty =
@@ -168,6 +171,25 @@ function ChatPanel({ sessionToken, connections, footer }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, progress]);
+
+  async function handleDeleteThread(targetThreadId: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (deletingThreadId || running) return;
+
+    setDeletingThreadId(targetThreadId);
+    try {
+      await deleteThread(sessionToken, targetThreadId);
+      setThreads((current) => current.filter((t) => t.id !== targetThreadId));
+
+      if (threadId === targetThreadId) {
+        startNewChat();
+      }
+    } catch (err) {
+      console.error("Failed to delete chat thread:", err);
+    } finally {
+      setDeletingThreadId(null);
+    }
+  }
 
   function startNewChat() {
     if (running) return;
@@ -332,22 +354,52 @@ function ChatPanel({ sessionToken, connections, footer }: Props) {
               <div className={styles.threadList}>
                 {threads.map((thread) => {
                   const active = thread.id === threadId;
+                  const isDeleting = deletingThreadId === thread.id;
+
                   return (
-                    <button
+                    <div
                       key={thread.id}
-                      type="button"
-                      disabled={running || loadingThread}
-                      onClick={() => resumeThread(thread.id)}
                       className={cn(
-                        styles.threadBtn,
-                        active ? styles.threadBtnActive : styles.threadBtnIdle,
+                        "group relative flex items-center justify-between rounded-xl transition-all",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "hover:bg-sidebar-accent/60 text-sidebar-foreground",
                       )}
                     >
-                      <span className={styles.threadTitle}>{thread.title}</span>
-                      <span className={styles.threadTime}>
-                        {thread.updatedAt}
-                      </span>
-                    </button>
+                      <button
+                        type="button"
+                        disabled={running || loadingThread || isDeleting}
+                        onClick={() => resumeThread(thread.id)}
+                        className="flex min-w-0 flex-1 flex-col px-3 py-2.5 text-left disabled:opacity-50"
+                      >
+                        <span className={styles.threadTitle}>
+                          {thread.title}
+                        </span>
+                        <span className={styles.threadTime}>
+                          {thread.updatedAt}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        title="Delete chat"
+                        aria-label="Delete chat"
+                        disabled={isDeleting || running}
+                        onClick={(e) => handleDeleteThread(thread.id, e)}
+                        className={cn(
+                          "mr-2 flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-all",
+                          "hover:bg-destructive/15 hover:text-destructive",
+                          "opacity-0 group-hover:opacity-100 focus:opacity-100",
+                          isDeleting && "opacity-100 cursor-not-allowed",
+                        )}
+                      >
+                        {isDeleting ? (
+                          <LoaderCircle className="size-3.5 animate-spin text-destructive" />
+                        ) : (
+                          <Trash2 className="size-3.5" />
+                        )}
+                      </button>
+                    </div>
                   );
                 })}
               </div>
