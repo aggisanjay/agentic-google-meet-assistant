@@ -29,6 +29,21 @@ export type ThreadMessage = {
   content: string;
 };
 
+function normalizeApiKeys() {
+  if (!process.env.GOOGLE_API_KEY && process.env.GOOGLE_GEMINI_API_KEY) {
+    process.env.GOOGLE_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+  }
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY && process.env.GOOGLE_GEMINI_API_KEY) {
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
+  }
+  if (!process.env.HF_TOKEN) {
+    const hfKey = process.env.HUGGINGFACE_API_KEY || process.env.HF_API_KEY;
+    if (hfKey) {
+      process.env.HF_TOKEN = hfKey;
+    }
+  }
+}
+
 function modelName() {
   if (process.env.AI_MODEL) {
     return process.env.AI_MODEL.includes("/")
@@ -42,7 +57,34 @@ function modelName() {
   ) {
     return "google/gemini-3.6-flash";
   }
+  if (process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY || process.env.HF_API_KEY) {
+    return getHfModelName();
+  }
   return `openai/${process.env.AI_MODEL ?? "gpt-4o-mini"}`;
+}
+
+export function getHfModelName() {
+  if (process.env.HF_MODEL) {
+    return process.env.HF_MODEL.includes("/")
+      ? process.env.HF_MODEL
+      : `huggingface/${process.env.HF_MODEL}`;
+  }
+  return "huggingface/meta-llama/Llama-3.3-70B-Instruct";
+}
+
+export function isRateLimitOrQuotaError(error: unknown): boolean {
+  if (!error) return false;
+  const msg = (error instanceof Error ? error.message : String(error)).toLowerCase();
+  return (
+    msg.includes("429") ||
+    msg.includes("quota") ||
+    msg.includes("rate limit") ||
+    msg.includes("rate_limit") ||
+    msg.includes("resource_exhausted") ||
+    msg.includes("overloaded") ||
+    msg.includes("too many requests") ||
+    msg.includes("capacity")
+  );
 }
 
 function messageText(content: unknown): string {
@@ -151,38 +193,16 @@ export async function deleteUserThread(
   await memory.deleteThread(threadId);
 }
 
-export async function streamAgentReply(input: StreamAgentReplyInput) {
-  if (!process.env.GOOGLE_API_KEY && process.env.GOOGLE_GEMINI_API_KEY) {
-    process.env.GOOGLE_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
-  }
-  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY && process.env.GOOGLE_GEMINI_API_KEY) {
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = process.env.GOOGLE_GEMINI_API_KEY;
-  }
-
-  const hasApiKey =
-    process.env.GOOGLE_API_KEY ||
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
-    process.env.GOOGLE_GEMINI_API_KEY ||
-    process.env.OPENAI_API_KEY;
-
-  if (!hasApiKey) {
-    throw new Error(
-      "Neither GOOGLE_API_KEY nor OPENAI_API_KEY is set in environment",
-    );
-  }
-
-  input.onEvent({
-    type: "started",
-    message: "Agent is planning",
-  });
-
-  const memory = createAgentMemory();
-
+async function runModelStream(
+  model: string,
+  input: StreamAgentReplyInput,
+  memory: ReturnType<typeof createAgentMemory>,
+): Promise<{ tokenCount: number }> {
   const agent = new Agent({
-    id: "metting-assistant",
-    name: "Meeting Assitant",
+    id: "meeting-assistant",
+    name: "Meeting Assistant",
     instructions: getAgentInstructions(),
-    model: modelName(),
+    model,
     tools: createCalendarTools(input.authUserId),
     memory,
   });
@@ -194,20 +214,21 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     },
   });
 
+  let tokenCount = 0;
+
   for await (const chunk of result.fullStream) {
     if (chunk.type === "tool-call") {
       input.onEvent({
         type: "progress",
         message: `Running ${chunk.payload.toolName}`,
       });
-
       continue;
     }
 
     if (chunk.type === "text-delta") {
       const text = chunk.payload.text;
-
       if (text) {
+        tokenCount++;
         input.onEvent({
           type: "token",
           token: text,
@@ -216,23 +237,92 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     }
   }
 
-  // streaming finsihes
+  return { tokenCount };
+}
 
-  const thread = await memory.getThreadById({
-    threadId: input.threadId,
-    resourceId: input.authUserId,
-  });
+export async function streamAgentReply(input: StreamAgentReplyInput) {
+  normalizeApiKeys();
 
-  if (thread && !thread.title?.trim()) {
-    await memory.updateThread({
-      id: thread.id,
-      title: input.message.slice(0, 80),
-      metadata: thread.metadata ?? {},
-    });
+  const hasGeminiKey = Boolean(
+    process.env.GOOGLE_API_KEY ||
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
+    process.env.GOOGLE_GEMINI_API_KEY,
+  );
+  const hasHfToken = Boolean(
+    process.env.HF_TOKEN ||
+    process.env.HUGGINGFACE_API_KEY ||
+    process.env.HF_API_KEY,
+  );
+  const hasOpenAiKey = Boolean(process.env.OPENAI_API_KEY);
+
+  if (!hasGeminiKey && !hasHfToken && !hasOpenAiKey) {
+    throw new Error(
+      "No AI provider key found. Please set GOOGLE_GEMINI_API_KEY or HF_TOKEN in your environment.",
+    );
   }
 
   input.onEvent({
-    type: "completed",
-    message: "done",
+    type: "started",
+    message: "Agent is planning",
   });
+
+  const memory = createAgentMemory();
+  const primaryModel = modelName();
+  const hfModel = getHfModelName();
+
+  let finished = false;
+
+  try {
+    await runModelStream(primaryModel, input, memory);
+    finished = true;
+  } catch (error: any) {
+    const isLimit = isRateLimitOrQuotaError(error);
+    console.warn(`Primary model (${primaryModel}) error:`, error?.message || error);
+
+    if (hasHfToken && primaryModel !== hfModel) {
+      input.onEvent({
+        type: "progress",
+        message: isLimit
+          ? "Gemini limit reached. Switching to Hugging Face fallback..."
+          : "Primary model unavailable. Switching to Hugging Face fallback...",
+      });
+
+      try {
+        await runModelStream(hfModel, input, memory);
+        finished = true;
+      } catch (hfError: any) {
+        console.error(`Hugging Face fallback (${hfModel}) failed:`, hfError?.message || hfError);
+        throw new Error(
+          `Both Gemini and Hugging Face failed. Primary: ${error?.message || error}. Fallback: ${hfError?.message || hfError}`,
+        );
+      }
+    } else {
+      if (isLimit) {
+        throw new Error(
+          "Gemini rate limit or quota exceeded. To automatically fallback, add HF_TOKEN to your .env file.",
+        );
+      }
+      throw error;
+    }
+  }
+
+  if (finished) {
+    const thread = await memory.getThreadById({
+      threadId: input.threadId,
+      resourceId: input.authUserId,
+    });
+
+    if (thread && !thread.title?.trim()) {
+      await memory.updateThread({
+        id: thread.id,
+        title: input.message.slice(0, 80),
+        metadata: thread.metadata ?? {},
+      });
+    }
+
+    input.onEvent({
+      type: "completed",
+      message: "done",
+    });
+  }
 }
