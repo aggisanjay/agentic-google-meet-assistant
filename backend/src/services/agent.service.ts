@@ -55,7 +55,7 @@ function modelName() {
     process.env.GOOGLE_API_KEY ||
     process.env.GOOGLE_GEMINI_API_KEY
   ) {
-    return "google/gemini-2.5-flash";
+    return "google/gemini-3.5-flash";
   }
   if (process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY || process.env.HF_API_KEY) {
     return getHfModelName();
@@ -69,7 +69,7 @@ export function getHfModelName() {
       ? process.env.HF_MODEL
       : `huggingface/${process.env.HF_MODEL}`;
   }
-  return "huggingface/meta-llama/Llama-3.3-70B-Instruct";
+  return "huggingface/Qwen/Qwen3.8-27B";
 }
 
 export function isRateLimitOrQuotaError(error: unknown): boolean {
