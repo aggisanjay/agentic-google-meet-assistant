@@ -356,7 +356,7 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     } else {
       if (isLimit) {
         throw new Error(
-          "Gemini rate limit or quota exceeded. Please configure HF_TOKEN in your environment variables to automatically enable Hugging Face fallback.",
+          "The assistant is temporarily busy. Please try again in a moment.",
         );
       }
       throw error;
