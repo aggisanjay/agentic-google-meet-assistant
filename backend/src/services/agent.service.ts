@@ -55,7 +55,7 @@ function modelName() {
     process.env.GOOGLE_API_KEY ||
     process.env.GOOGLE_GEMINI_API_KEY
   ) {
-    return "google/gemini-3.6-flash";
+    return "google/gemini-2.5-flash";
   }
   if (process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY || process.env.HF_API_KEY) {
     return getHfModelName();
@@ -217,6 +217,18 @@ async function runModelStream(
   let tokenCount = 0;
 
   for await (const chunk of result.fullStream) {
+    // Detect error chunks emitted by Mastra's stream
+    if (chunk.type === "error") {
+      const payloadError = (chunk as any).payload?.error || (chunk as any).error;
+      const errorMsg =
+        payloadError instanceof Error
+          ? payloadError.message
+          : typeof payloadError === "string"
+            ? payloadError
+            : JSON.stringify(payloadError || {});
+      throw new Error(errorMsg || "Stream error occurred");
+    }
+
     if (chunk.type === "tool-call") {
       input.onEvent({
         type: "progress",
@@ -235,6 +247,10 @@ async function runModelStream(
         });
       }
     }
+  }
+
+  if (tokenCount === 0) {
+    throw new Error("Model failed to generate response tokens");
   }
 
   return { tokenCount };
@@ -277,14 +293,14 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     finished = true;
   } catch (error: any) {
     const isLimit = isRateLimitOrQuotaError(error);
-    console.warn(`Primary model (${primaryModel}) error:`, error?.message || error);
+    console.warn(`Primary model (${primaryModel}) failed:`, error?.message || error);
 
     if (hasHfToken && primaryModel !== hfModel) {
       input.onEvent({
         type: "progress",
         message: isLimit
-          ? "Gemini limit reached. Switching to Hugging Face fallback..."
-          : "Primary model unavailable. Switching to Hugging Face fallback...",
+          ? "Gemini quota/rate limit reached. Switching to Hugging Face fallback..."
+          : "Gemini unavailable. Switching to Hugging Face fallback...",
       });
 
       try {
@@ -299,7 +315,7 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     } else {
       if (isLimit) {
         throw new Error(
-          "Gemini rate limit or quota exceeded. To automatically fallback, add HF_TOKEN to your .env file.",
+          "Gemini rate limit or quota exceeded. Please configure HF_TOKEN in your environment variables to automatically enable Hugging Face fallback.",
         );
       }
       throw error;
