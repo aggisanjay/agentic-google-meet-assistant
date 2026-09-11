@@ -3,6 +3,51 @@ import { createAgentMemory } from "../config/memory.js";
 import { getAgentInstructions } from "../config/agent-instructions.js";
 import { createCalendarTools } from "./agent-tools.service.js";
 
+// Intercept requests to Hugging Face router to ensure OpenAI / Cerebras API compatibility:
+// 1. Move any middle system messages (like Mastra working memory) to the top prompt
+// 2. Strip unsupported reasoning_content from prior assistant messages
+if (typeof globalThis.fetch === "function" && !(globalThis as any).__hfFetchPatched) {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async function (input, init) {
+    if (
+      typeof input === "string" &&
+      input.includes("router.huggingface.co") &&
+      init?.body
+    ) {
+      try {
+        const parsed = JSON.parse(init.body.toString());
+        if (Array.isArray(parsed.messages)) {
+          const systemParts: string[] = [];
+          const nonSystemMessages: any[] = [];
+          for (const msg of parsed.messages) {
+            if (msg.role === "system") {
+              systemParts.push(
+                typeof msg.content === "string"
+                  ? msg.content
+                  : JSON.stringify(msg.content),
+              );
+            } else {
+              if (msg && typeof msg === "object" && "reasoning_content" in msg) {
+                delete msg.reasoning_content;
+              }
+              nonSystemMessages.push(msg);
+            }
+          }
+          parsed.messages = [
+            ...(systemParts.length > 0
+              ? [{ role: "system", content: systemParts.join("\n\n") }]
+              : []),
+            ...nonSystemMessages,
+          ];
+          init.body = JSON.stringify(parsed);
+        }
+      } catch {}
+    }
+    return originalFetch.call(this, input, init);
+  };
+  (globalThis as any).__hfFetchPatched = true;
+}
+
 export type AgentEvent = {
   type: "started" | "progress" | "token" | "completed" | "error";
   message?: string;
