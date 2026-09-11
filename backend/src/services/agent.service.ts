@@ -343,9 +343,7 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     if (hasHfToken && primaryModel !== hfModel) {
       input.onEvent({
         type: "progress",
-        message: isLimit
-          ? "Gemini quota/rate limit reached. Switching to Hugging Face fallback..."
-          : "Gemini unavailable. Switching to Hugging Face fallback...",
+        message: "Thinking...",
       });
 
       try {
@@ -353,9 +351,7 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
         finished = true;
       } catch (hfError: any) {
         console.error(`Hugging Face fallback (${hfModel}) failed:`, hfError?.message || hfError);
-        throw new Error(
-          `Both Gemini and Hugging Face failed. Primary: ${error?.message || error}. Fallback: ${hfError?.message || hfError}`,
-        );
+        throw new Error("The assistant is temporarily busy. Please try again in a moment.");
       }
     } else {
       if (isLimit) {
