@@ -9,9 +9,14 @@ declare module "lucide-react" {
   export type Icon = React.ForwardRefExoticComponent<
     LucideProps & React.RefAttributes<SVGSVGElement>
   >;
+
   export const ArrowUp: Icon;
+  export const ArrowRight: Icon;
+  export const ArrowLeft: Icon;
+  export const ArrowDown: Icon;
   export const LoaderCircle: Icon;
   export const MessageSquarePlus: Icon;
+  export const MessageSquareCode: Icon;
   export const Sparkles: Icon;
   export const Trash2: Icon;
   export const Trash: Icon;
@@ -29,7 +34,27 @@ declare module "lucide-react" {
   export const X: Icon;
   export const ChevronDown: Icon;
   export const ChevronUp: Icon;
+  export const ChevronRight: Icon;
+  export const ChevronLeft: Icon;
   export const Send: Icon;
   export const Bot: Icon;
   export const User: Icon;
+  export const Users: Icon;
+  export const Clock: Icon;
+  export const Shield: Icon;
+  export const ShieldCheck: Icon;
+  export const Cpu: Icon;
+  export const Zap: Icon;
+  export const Code2: Icon;
+  export const Database: Icon;
+  export const Layers: Icon;
+  export const Terminal: Icon;
+  export const Lock: Icon;
+  export const Workflow: Icon;
+  export const Activity: Icon;
+  export const Award: Icon;
+  export const FileCode: Icon;
+  export const Compass: Icon;
+  export const Play: Icon;
+  export const RotateCcw: Icon;
 }

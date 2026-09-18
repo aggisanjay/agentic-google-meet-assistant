@@ -2,55 +2,61 @@
 
 import { RedirectIfAuthenticated } from "@/components/auth/RedirectIfAuthenticated";
 import SignInComponent from "@/components/auth/sign-in";
-import { Calendar, CheckCircle2, Sparkles, Video } from "lucide-react";
+import { CheckCircle2, Sparkles, Video } from "lucide-react";
+import Link from "next/link";
 
 function SignInPage() {
   return (
-    <main className="relative min-h-svh w-full flex flex-col items-center justify-center overflow-hidden px-4 py-12 bg-background app-shell-bg">
-      {/* Decorative ambient background glows */}
-      <div className="pointer-events-none absolute -top-40 -left-40 size-[520px] rounded-full bg-primary/20 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 -right-40 size-[520px] rounded-full bg-emerald-500/15 blur-[130px]" />
+    <main className="relative min-h-svh w-full flex flex-col items-center justify-center overflow-hidden px-4 py-12 bg-white app-shell-bg font-sans">
+      {/* Decorative ambient background glows (Launchify lime-emerald glow) */}
+      <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-[500px] overflow-hidden -z-10">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-gradient-to-b from-[#86efac]/40 via-[#bbf7d0]/25 to-transparent blur-[80px] rounded-full" />
+      </div>
 
       <div className="relative z-10 w-full max-w-[450px] flex flex-col items-center">
-        {/* Brand header above card */}
+        {/* Brand header above card (Launchify style logo) */}
         <div className="mb-7 flex flex-col items-center text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1 text-xs font-medium text-primary shadow-xs backdrop-blur-md">
-            <Sparkles className="size-3.5 text-primary animate-pulse" />
-            <span>AI-Powered Meeting Assistant</span>
+          <Link href="/" className="mb-5 flex items-center gap-1.5 group">
+            <span className="w-2.5 h-6 bg-[#00c26d] rounded-sm inline-block group-hover:scale-105 transition-transform" />
+            <span className="font-extrabold text-2xl tracking-tight text-slate-950">
+              agentic
+            </span>
+            <span className="text-slate-400 font-semibold text-2xl">meet</span>
+          </Link>
+
+          <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3.5 py-1 text-xs font-semibold text-emerald-800 shadow-xs">
+            <Sparkles className="h-3.5 w-3.5 text-[#00c26d]" />
+            <span>Autonomous Meeting Assistant</span>
           </div>
 
-          <div className="relative mb-3 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-teal-400 text-primary-foreground shadow-xl shadow-primary/25 ring-4 ring-primary/10">
-            <Calendar className="size-7 text-white" />
-          </div>
-
-          <h1 className="font-heading text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Welcome Back
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-950 sm:text-4xl">
+            Welcome back
           </h1>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground leading-relaxed">
-            Sign in to connect your calendar and let your agent manage scheduling, check conflicts, and generate Google Meet links.
+          <p className="mt-2 max-w-sm text-sm text-slate-600 leading-relaxed">
+            Sign in to connect your Google Calendar and let Gemini manage scheduling, check conflicts, and generate Meet links.
           </p>
         </div>
 
         {/* Main Card */}
-        <div className="w-full rounded-3xl border border-border/80 bg-card/85 p-6 sm:p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] backdrop-blur-2xl dark:border-white/10 dark:bg-card/75 dark:shadow-[0_25px_80px_-20px_rgba(0,0,0,0.6)] transition-all">
+        <div className="w-full rounded-3xl border border-slate-200/90 bg-white p-6 sm:p-8 shadow-xl shadow-slate-900/5 transition-all">
           <RedirectIfAuthenticated>
             <SignInComponent />
           </RedirectIfAuthenticated>
         </div>
 
         {/* Feature Badges Below Card */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-muted-foreground/80">
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs font-medium text-slate-500">
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="size-3.5 text-primary" />
+            <CheckCircle2 className="h-3.5 w-3.5 text-[#00c26d]" />
             <span>Google Calendar Sync</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Video className="size-3.5 text-primary" />
+            <Video className="h-3.5 w-3.5 text-[#00c26d]" />
             <span>Instant Google Meet</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Sparkles className="size-3.5 text-primary" />
-            <span>Gemini AI Agent</span>
+            <Sparkles className="h-3.5 w-3.5 text-[#00c26d]" />
+            <span>Gemini 3.6 Flash</span>
           </div>
         </div>
       </div>
