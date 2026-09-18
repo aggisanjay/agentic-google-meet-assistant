@@ -147,7 +147,7 @@ export function AgentSimulator() {
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-800 mb-2">
             <Zap className="h-3.5 w-3.5 text-[#00c26d]" />
-            Interactive Recruiter Sandbox
+            Interactive AI Playground
           </div>
           <h3 className="text-xl sm:text-3xl font-extrabold tracking-tight text-slate-950">
             Test the Gemini & Mastra Agent in Real Time
@@ -237,7 +237,7 @@ export function AgentSimulator() {
           <div className="flex items-start gap-3 justify-end">
             <div className="max-w-xl rounded-2xl rounded-tr-none bg-[#00c26d] px-4 py-3 text-sm text-white shadow-sm">
               <p className="text-xs text-white/80 font-mono mb-1">
-                Recruiter Prompt
+                User Request
               </p>
               <p className="font-medium text-sm leading-relaxed">{scenario.prompt}</p>
             </div>

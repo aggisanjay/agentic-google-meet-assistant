@@ -149,26 +149,26 @@ export default function LandingPage() {
     },
   ];
 
-  const interviewTradeoffs = [
+  const faqs = [
     {
-      question: "Why Mastra instead of LangChain or raw API calls?",
+      question: "How does the AI assistant prevent double-booking and conflicts?",
       answer:
-        "Mastra provides a lightweight, highly structured TypeScript agent framework with first-class Zod schema validation, native streaming, and embedded LibSQL memory. Unlike heavier Python-centric alternatives, it eliminates bloated abstractions and ensures strict type-safety across all calendar tools.",
+        "Before scheduling or confirming any event, the agent executes real-time queries against Google Calendar's freebusy API across all invitees. If an overlap is detected, it flags the conflict and suggests alternate open windows.",
     },
     {
-      question: "Why Descope Outbound Applications instead of custom OAuth handling?",
+      question: "How is my Google Calendar data and authentication secured?",
       answer:
-        "Managing Google OAuth involves handling refresh token lifecycles, token rotation, database encryption, and scope consent. Descope Outbound Apps delegates all token encryption and automatic refreshing to a dedicated identity provider, eliminating the risk of leaking raw Google credentials on the frontend.",
+        "We utilize Descope Outbound Applications to isolate Google OAuth tokens. Your raw refresh tokens and credentials are never stored on the client or exposed to third parties, ensuring enterprise-grade token rotation and encryption.",
     },
     {
-      question: "Why Server-Sent Events (SSE) over WebSockets?",
+      question: "Can the assistant automatically generate Google Meet video links?",
       answer:
-        "For LLM generation and agent tool telemetry, communication is predominantly server-to-client streaming. SSE operates natively over standard HTTP/2, automatically handles connection reconnects, passes through corporate proxies and firewalls effortlessly, and avoids the complexity of WebSocket state servers.",
+        "Yes! Every scheduled event automatically provisions a unique Google Meet video link via conferenceData injection, and Google sends calendar invitations directly to attendee emails.",
     },
     {
-      question: "How are timezone and scheduling conflicts handled?",
+      question: "Does the agent remember my scheduling preferences across conversations?",
       answer:
-        "The agent normalizes all user-provided dates into ISO-8601 strings and validates them through Zod. Before committing any meeting, the agent automatically executes checkCalendarBusy via Google Calendar freebusy endpoint, reporting any existing conflicts and suggesting alternative slots.",
+        "Yes. Built on Mastra's multi-turn conversational memory and LibSQL, the agent retains context across chat threads, understanding relative references like 'reschedule yesterday's sync to next Tuesday morning'.",
     },
   ];
 
@@ -208,7 +208,7 @@ export default function LandingPage() {
               Features
             </a>
             <a href="#sandbox" className="hover:text-slate-950 transition-colors">
-              Simulator
+              Demo
             </a>
             <a href="#architecture" className="hover:text-slate-950 transition-colors">
               Architecture
@@ -216,8 +216,8 @@ export default function LandingPage() {
             <a href="#tech-stack" className="hover:text-slate-950 transition-colors">
               Tech Stack
             </a>
-            <a href="#trade-offs" className="hover:text-slate-950 transition-colors">
-              Interview Q&A
+            <a href="#faq" className="hover:text-slate-950 transition-colors">
+              FAQ
             </a>
           </nav>
 
@@ -287,7 +287,7 @@ export default function LandingPage() {
             </div>
 
             <span className="text-xs font-medium text-slate-700">
-              Trusted by 12,000+ creators & hiring managers
+              Trusted by 12,000+ creators & teams
             </span>
           </div>
 
@@ -545,23 +545,23 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* TECHNICAL INTERVIEW Q&A / TRADE-OFFS */}
-        <section id="trade-offs" className="scroll-mt-24 space-y-8">
+        {/* FREQUENTLY ASKED QUESTIONS */}
+        <section id="faq" className="scroll-mt-24 space-y-8">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-semibold text-emerald-800">
               <MessageSquareCode className="h-3.5 w-3.5 text-[#00c26d]" />
-              Hiring Manager Q&A
+              Frequently Asked Questions
             </div>
             <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-950">
-              Architectural Decisions & Technical Trade-offs
+              Everything You Need to Know
             </h2>
             <p className="text-sm text-slate-600 max-w-xl mx-auto">
-              Prepared engineering answers for technical recruiter and architecture interviews.
+              Clear answers on how the agent coordinates schedules, detects conflicts, and handles Google Calendar data securely.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {interviewTradeoffs.map((item, idx) => (
+            {faqs.map((item, idx) => (
               <div
                 key={idx}
                 className="rounded-3xl border border-slate-200 bg-white p-6 space-y-3 shadow-xs hover:border-emerald-300 transition-colors"
@@ -581,14 +581,14 @@ export default function LandingPage() {
         {/* BOTTOM CTA BANNER (Launchify style) */}
         <section className="relative overflow-hidden rounded-3xl border border-emerald-200 bg-gradient-to-b from-emerald-50/80 via-white to-white p-8 sm:p-14 text-center space-y-6 shadow-sm">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-[#00c26d]/10 px-3.5 py-1 text-xs font-semibold text-[#00c26d]">
-            <Award className="h-3.5 w-3.5" />
-            Recruiter Summary
+            <Sparkles className="h-3.5 w-3.5" />
+            Instant Setup
           </div>
           <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-slate-950 max-w-2xl mx-auto">
-            Ready to test the live agent in action?
+            Supercharge your meeting workflow with AI.
           </h2>
           <p className="text-sm sm:text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
-            Connect your Google Calendar or launch the test sandbox to experience autonomous agent scheduling with Google Meet links in real-time.
+            Connect your Google Calendar and let your autonomous assistant coordinate meetings, eliminate conflicts, and generate Meet links in seconds.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
