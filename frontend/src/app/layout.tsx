@@ -11,9 +11,16 @@ const sans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Agentic Calendar Assistant | AI Meeting Orchestrator",
+  title: "Agentic Meet | AI Calendar & Meeting Assistant",
   description:
     "Autonomous meeting and calendar management assistant powered by Google Gemini, Mastra, and Descope.",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: "/icon.svg",
+    shortcut: "/icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
