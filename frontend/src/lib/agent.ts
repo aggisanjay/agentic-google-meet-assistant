@@ -2,10 +2,39 @@ import { apiFetch } from "@/lib/api";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
+export type SourceProvenance = {
+  sourceType: string;
+  verificationStatus: string;
+  calendarId: string;
+  retrievalTimestamp: string;
+  toolName?: string;
+  eventId?: string | null;
+  start?: string | null;
+  end?: string | null;
+  timezone?: string;
+  evidenceSummary?: string;
+  conflictsDetected?: number;
+  operationStatus: string;
+  traceId?: string;
+};
+
+export type TelemetryData = {
+  requestId: string;
+  model: string;
+  totalDurationMs?: number;
+  timeToFirstTokenMs?: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd?: number;
+  status: string;
+};
+
 export type AgentStreamEvent = {
-  type: "started" | "progress" | "token" | "completed" | "error";
+  type: "started" | "progress" | "token" | "provenance" | "telemetry" | "completed" | "error";
   message?: string;
   token?: string;
+  provenance?: SourceProvenance;
+  telemetry?: TelemetryData;
 };
 
 export type ThreadSummary = {
@@ -18,6 +47,8 @@ export type ThreadMessage = {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  provenance?: SourceProvenance[];
+  telemetry?: TelemetryData;
 };
 
 export async function listThreads(token: string) {
@@ -45,9 +76,16 @@ export async function deleteThread(token: string, threadId: string) {
 
 export async function streamAgentChat(
   token: string,
-  input: { message: string; threadId: string },
+  input: { message: string; threadId: string; timezone?: string },
   onEvent: (event: AgentStreamEvent) => void,
+  signal?: AbortSignal,
 ) {
+  const userTimezone =
+    input.timezone ||
+    (typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : "UTC");
+
   const res = await fetch(`${API_URL}/api/agent/chat`, {
     method: "POST",
     headers: {
@@ -55,38 +93,56 @@ export async function streamAgentChat(
       "Content-Type": "application/json",
       Accept: "text/event-stream",
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      ...input,
+      timezone: userTimezone,
+    }),
+    signal,
   });
 
   if (!res.ok || !res.body) {
-    throw new Error("Agent request failed");
+    let errorMessage = "Agent request failed";
+    try {
+      const errJson = await res.json();
+      if (errJson?.error) errorMessage = errJson.error;
+    } catch {}
+    throw new Error(errorMessage);
   }
 
   const reader = res.body.getReader();
-
   const decoder = new TextDecoder();
-
   let buffer = "";
 
-  while (true) {
-    const { value, done } = await reader.read();
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
 
-    buffer += decoder.decode(value, { stream: !done });
+      buffer += decoder.decode(value, { stream: !done });
 
-    // sse events ->
-    const blocks = buffer.split(/\n\n/);
-    buffer = blocks.pop() ?? "";
+      const blocks = buffer.split(/\n\n/);
+      buffer = blocks.pop() ?? "";
 
-    for (const block of blocks) {
-      for (const line of block.split("\n")) {
-        if (!line.startsWith("data:")) continue;
-        // strip the data: prefix
-        const data = line.slice(5).trim();
-
-        if (data) onEvent(JSON.parse(data) as AgentStreamEvent);
+      for (const block of blocks) {
+        for (const line of block.split("\n")) {
+          if (!line.startsWith("data:")) continue;
+          const data = line.slice(5).trim();
+          if (data) {
+            try {
+              onEvent(JSON.parse(data) as AgentStreamEvent);
+            } catch (parseErr) {
+              console.warn("Failed to parse SSE line:", data, parseErr);
+            }
+          }
+        }
       }
-    }
 
-    if (done) break;
+      if (done) break;
+    }
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      onEvent({ type: "progress", message: "Request cancelled by user" });
+      return;
+    }
+    throw err;
   }
 }

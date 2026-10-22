@@ -10,12 +10,17 @@ export type AuthContext = {
   token: Record<string, unknown>;
 };
 
-declare global {
-  namespace Express {
-    interface Request {
-      auth?: AuthContext;
-    }
+declare module "express-serve-static-core" {
+  interface Request {
+    userAuth?: AuthContext;
   }
+}
+
+export function getAuthUser(req: Request): AuthContext {
+  if (!req.userAuth) {
+    throw new Error("User is not authenticated");
+  }
+  return req.userAuth;
 }
 
 export async function requireSession(
@@ -35,19 +40,23 @@ export async function requireSession(
 
   try {
     const authInfo = await descopeClient.validateSession(token);
-    const claims = authInfo.token as Record<string, unknown>;
-    const authUserId = String(claims.sub ?? "");
-
-    if (!authInfo) {
+    if (!authInfo || !authInfo.token) {
       res.status(401).json({ error: "Unauthorized", success: false });
+      return;
+    }
+
+    const claims = authInfo.token as Record<string, unknown>;
+    const authUserId = String(claims.sub ?? "").trim();
+
+    if (!authUserId) {
+      res.status(401).json({ error: "Unauthorized: Missing user identity", success: false });
       return;
     }
 
     const email = typeof claims.email === "string" ? claims.email : undefined;
     const user = await ensureUser({ authUserId, email });
 
-    // add auth info in ur req object
-    req.auth = {
+    req.userAuth = {
       authUserId,
       email,
       name: typeof claims.name === "string" ? claims.name : undefined,

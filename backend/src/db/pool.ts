@@ -10,7 +10,16 @@ export function getPool(): Pool {
       throw new Error("DATABASE_URL is not set here");
     }
 
-    pool = new Pool({ connectionString });
+    pool = new Pool({
+      connectionString,
+      max: 10,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 5000,
+    });
+
+    pool.on("error", (err) => {
+      console.error("Unexpected error on idle PostgreSQL client:", err.message || err);
+    });
   }
 
   return pool;

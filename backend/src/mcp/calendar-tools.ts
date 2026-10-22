@@ -8,16 +8,22 @@ function textResult(data: unknown) {
   };
 }
 
-function authUserIdFromToken(token: string): string {
-  const payload = JSON.parse(
-    Buffer.from(token.split(".")[1] ?? "", "base64").toString("utf8"),
-  ) as { sub?: string };
+import { descopeClient } from "../config/descope.js";
 
-  if (!payload.sub) {
-    throw new Error("MCP token has no user id");
+async function authUserIdFromToken(token: string): Promise<string> {
+  const authInfo = await descopeClient.validateSession(token);
+  if (!authInfo || !authInfo.token) {
+    throw new Error("Invalid or unverified MCP token");
   }
 
-  return String(payload.sub);
+  const claims = authInfo.token as Record<string, unknown>;
+  const sub = String(claims.sub ?? "").trim();
+
+  if (!sub) {
+    throw new Error("MCP token has no valid subject claim");
+  }
+
+  return sub;
 }
 
 const defineMcpTool = defineTool as (cfg: {
@@ -46,7 +52,7 @@ export const listUpcomingMeetingsTools = defineMcpTool({
   scopes: ["profile"],
   handler: async (args, extra) => {
     try {
-      const authUserId = authUserIdFromToken(extra.authInfo.token);
+      const authUserId = await authUserIdFromToken(extra.authInfo.token);
 
       const meetings = await listUpcomingMeetings({
         authUserId,

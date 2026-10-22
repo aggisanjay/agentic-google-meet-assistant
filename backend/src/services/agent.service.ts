@@ -2,6 +2,11 @@ import { Agent } from "@mastra/core/agent";
 import { createAgentMemory } from "../config/memory.js";
 import { getAgentInstructions } from "../config/agent-instructions.js";
 import { createCalendarTools } from "./agent-tools.service.js";
+import {
+  TelemetryTracker,
+  recordLatencySample,
+} from "./telemetry.service.js";
+import { resolveTimezone } from "../utils/timezone.js";
 
 // Intercept requests to Hugging Face router to ensure OpenAI / Cerebras API compatibility:
 // 1. Move any middle system messages (like Mastra working memory) to the top prompt
@@ -49,9 +54,11 @@ if (typeof globalThis.fetch === "function" && !(globalThis as any).__hfFetchPatc
 }
 
 export type AgentEvent = {
-  type: "started" | "progress" | "token" | "completed" | "error";
+  type: "started" | "progress" | "token" | "provenance" | "telemetry" | "completed" | "error";
   message?: string;
   token?: string;
+  provenance?: unknown;
+  telemetry?: unknown;
 };
 
 export type StreamAgentReplyInput = {
@@ -59,6 +66,7 @@ export type StreamAgentReplyInput = {
   authUserId: string;
   threadId: string;
   message: string;
+  timezone?: string;
   onEvent: (event: AgentEvent) => void;
 };
 
@@ -89,7 +97,7 @@ function normalizeApiKeys() {
   }
 }
 
-function modelName() {
+export function modelName(): string {
   if (process.env.AI_MODEL) {
     return process.env.AI_MODEL.includes("/")
       ? process.env.AI_MODEL
@@ -108,7 +116,7 @@ function modelName() {
   return `openai/${process.env.AI_MODEL ?? "gpt-4o-mini"}`;
 }
 
-export function getHfModelName() {
+export function getHfModelName(): string {
   if (process.env.HF_MODEL) {
     return process.env.HF_MODEL.includes("/")
       ? process.env.HF_MODEL
@@ -242,13 +250,16 @@ async function runModelStream(
   model: string,
   input: StreamAgentReplyInput,
   memory: ReturnType<typeof createAgentMemory>,
+  telemetry: TelemetryTracker,
 ): Promise<{ tokenCount: number }> {
+  const timezone = resolveTimezone(input.timezone);
+
   const agent = new Agent({
     id: "meeting-assistant",
     name: "Meeting Assistant",
-    instructions: getAgentInstructions(),
+    instructions: getAgentInstructions(timezone),
     model,
-    tools: createCalendarTools(input.authUserId),
+    tools: createCalendarTools(input.authUserId, timezone),
     memory,
   });
 
@@ -275,10 +286,24 @@ async function runModelStream(
     }
 
     if (chunk.type === "tool-call") {
+      telemetry.incrementToolCall();
       input.onEvent({
         type: "progress",
-        message: `Running ${chunk.payload.toolName}`,
+        message: `Executing ${chunk.payload.toolName}`,
       });
+      continue;
+    }
+
+    if (chunk.type === "tool-result") {
+      const toolResult = (chunk as any).payload?.result;
+      if (toolResult && typeof toolResult === "object") {
+        if (toolResult.provenance) {
+          input.onEvent({
+            type: "provenance",
+            provenance: toolResult.provenance,
+          });
+        }
+      }
       continue;
     }
 
@@ -286,6 +311,7 @@ async function runModelStream(
       const text = chunk.payload.text;
       if (text) {
         tokenCount++;
+        telemetry.recordFirstToken();
         input.onEvent({
           type: "token",
           token: text,
@@ -297,6 +323,10 @@ async function runModelStream(
   if (tokenCount === 0) {
     throw new Error("Model failed to generate response tokens");
   }
+
+  // Record approximate token usage: input words * 1.3, output tokens
+  const estimatedInputTokens = Math.round(input.message.split(/\s+/).length * 1.5) + 350;
+  telemetry.recordTokens(estimatedInputTokens, tokenCount);
 
   return { tokenCount };
 }
@@ -318,23 +348,39 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
 
   if (!hasGeminiKey && !hasHfToken && !hasOpenAiKey) {
     throw new Error(
-      "No AI provider key found. Please set GOOGLE_GEMINI_API_KEY or HF_TOKEN in your environment.",
+      "No AI provider key found. Please configure GOOGLE_GEMINI_API_KEY or HF_TOKEN.",
     );
   }
+
+  const memory = createAgentMemory();
+
+  // Enforce thread ownership validation to prevent cross-user thread hijacking
+  try {
+    const existingThread = await memory.getThreadById({
+      threadId: input.threadId,
+    });
+    if (existingThread && existingThread.resourceId && existingThread.resourceId !== input.authUserId) {
+      throw new Error("Unauthorized: Thread belongs to another user");
+    }
+  } catch (err: any) {
+    if (err?.message?.includes("Unauthorized")) {
+      throw err;
+    }
+  }
+
+  const primaryModel = modelName();
+  const hfModel = getHfModelName();
+  const telemetry = new TelemetryTracker(input.authUserId, input.threadId, primaryModel);
 
   input.onEvent({
     type: "started",
     message: "Agent is planning",
   });
 
-  const memory = createAgentMemory();
-  const primaryModel = modelName();
-  const hfModel = getHfModelName();
-
   let finished = false;
 
   try {
-    await runModelStream(primaryModel, input, memory);
+    await runModelStream(primaryModel, input, memory, telemetry);
     finished = true;
   } catch (error: any) {
     const isLimit = isRateLimitOrQuotaError(error);
@@ -343,20 +389,22 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
     if (hasHfToken && primaryModel !== hfModel) {
       input.onEvent({
         type: "progress",
-        message: "Thinking...",
+        message: "Primary model busy, switching to backup provider...",
       });
 
       try {
-        await runModelStream(hfModel, input, memory);
+        await runModelStream(hfModel, input, memory, telemetry);
         finished = true;
       } catch (hfError: any) {
+        telemetry.recordFailure(hfError, "provider_fallback_failure");
         console.error(`Hugging Face fallback (${hfModel}) failed:`, hfError?.message || hfError);
         throw new Error("The assistant is temporarily busy. Please try again in a moment.");
       }
     } else {
+      telemetry.recordFailure(error, isLimit ? "rate_limit" : "model_error");
       if (isLimit) {
         throw new Error(
-          "The assistant is temporarily busy. Please try again in a moment.",
+          "The assistant is temporarily busy due to rate limits. Please try again shortly.",
         );
       }
       throw error;
@@ -364,6 +412,16 @@ export async function streamAgentReply(input: StreamAgentReplyInput) {
   }
 
   if (finished) {
+    const metrics = telemetry.finalize();
+    if (metrics.totalDurationMs) {
+      recordLatencySample(metrics.totalDurationMs);
+    }
+
+    input.onEvent({
+      type: "telemetry",
+      telemetry: metrics,
+    });
+
     const thread = await memory.getThreadById({
       threadId: input.threadId,
       resourceId: input.authUserId,

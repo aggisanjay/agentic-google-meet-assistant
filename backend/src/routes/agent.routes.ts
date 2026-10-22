@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { requireSession } from "../middleware/requireSession.js";
+import { getAuthUser, requireSession } from "../middleware/requireSession.js";
 import {
   deleteUserThread,
   getThreadMessages,
@@ -12,16 +12,18 @@ export const agentRoutes = Router();
 
 const chatSchema = z.object({
   message: z.string().trim().min(1).max(5000),
-  threadId: z.uuid(),
+  threadId: z.string().uuid(),
+  timezone: z.string().optional(),
 });
 
-const threadIdSchema = z.uuid();
+const threadIdSchema = z.string().uuid();
 
 agentRoutes.use(requireSession);
 
 agentRoutes.get("/threads", async (req, res) => {
   try {
-    const threads = await listUserThreads(req.auth!.authUserId);
+    const auth = getAuthUser(req);
+    const threads = await listUserThreads(auth.authUserId);
     res.json({ threads });
   } catch (error) {
     const message =
@@ -38,7 +40,8 @@ agentRoutes.get("/threads/:threadId", async (req, res) => {
     return;
   }
   try {
-    const messages = await getThreadMessages(req.auth!.authUserId, parsed.data);
+    const auth = getAuthUser(req);
+    const messages = await getThreadMessages(auth.authUserId, parsed.data);
     res.json({ threadId: parsed.data, messages });
   } catch (error) {
     const message =
@@ -56,7 +59,8 @@ agentRoutes.delete("/threads/:threadId", async (req, res) => {
   }
 
   try {
-    await deleteUserThread(req.auth!.authUserId, parsed.data);
+    const auth = getAuthUser(req);
+    await deleteUserThread(auth.authUserId, parsed.data);
     res.json({ success: true, threadId: parsed.data });
   } catch (error) {
     const message =
@@ -68,9 +72,11 @@ agentRoutes.delete("/threads/:threadId", async (req, res) => {
 agentRoutes.post("/chat", async (req, res) => {
   const parsed = chatSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: "Invalid chat body" });
+    res.status(400).json({ error: "Invalid chat body", details: parsed.error.issues });
     return;
   }
+
+  const auth = getAuthUser(req);
 
   res.status(200);
   res.setHeader("Content-Type", "text/event-stream");
@@ -84,15 +90,16 @@ agentRoutes.post("/chat", async (req, res) => {
 
   try {
     await streamAgentReply({
-      userId: req.auth!.userId,
-      authUserId: req.auth!.authUserId,
+      userId: auth.userId,
+      authUserId: auth.authUserId,
       threadId: parsed.data.threadId,
       message: parsed.data.message,
+      timezone: parsed.data.timezone,
       onEvent: write,
     });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "failed to list threads";
+      error instanceof Error ? error.message : "failed to execute agent stream";
     write({ type: "error", message });
   } finally {
     res.end();
