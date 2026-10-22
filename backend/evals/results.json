@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "timestamp": "2026-10-22T16:32:29.743Z",
+  "timestamp": "2026-10-22T16:40:13.048Z",
   "totalScenarios": 15,
   "passedScenarios": 15,
   "metrics": {
@@ -14,7 +14,7 @@
   },
   "latency": {
     "medianMs": 0,
-    "p95Ms": 88,
+    "p95Ms": 190,
     "sampleSize": 15
   },
   "estimatedCost": {
@@ -29,7 +29,7 @@
       "category": "task_quality",
       "passed": true,
       "score": 1,
-      "durationMs": 88,
+      "durationMs": 190,
       "details": "Tool createMeeting arguments, timezone, and duration validated successfully",
       "provenanceVerified": true
     },
@@ -59,7 +59,7 @@
       "category": "task_quality",
       "passed": true,
       "score": 1,
-      "durationMs": 20,
+      "durationMs": 6,
       "details": "Availability range and Kolkata timezone bounds calculated accurately",
       "provenanceVerified": true
     },
@@ -79,7 +79,7 @@
       "category": "task_quality",
       "passed": true,
       "score": 1,
-      "durationMs": 4,
+      "durationMs": 1,
       "details": "Sydney timezone correctly resolved without server timezone bias",
       "provenanceVerified": true
     },
@@ -89,7 +89,7 @@
       "category": "task_quality",
       "passed": true,
       "score": 1,
-      "durationMs": 2,
+      "durationMs": 1,
       "details": "Daylight saving transition boundary in NY calculated accurately",
       "provenanceVerified": true
     },
