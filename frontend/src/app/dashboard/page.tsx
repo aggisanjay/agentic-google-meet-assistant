@@ -4,18 +4,18 @@ import ChatPanel from "@/components/dashboard/chat-panel";
 import ConnectionsPanel from "@/components/dashboard/connection-panel";
 import { Button } from "@/components/ui/button";
 import { useDescope, useSession, useUser } from "@descope/nextjs-sdk/client";
-import { LogOut } from "lucide-react";
+import { LoaderCircle, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const styles = {
   loadingShell:
-    "app-shell-bg flex h-svh items-center justify-center text-sm text-muted-foreground",
-  shell: "app-shell-bg",
-  userLabel: "mb-2 truncate px-1 text-sm text-muted-foreground",
+  "app-shell-bg flex h-svh items-center justify-center text-sm text-[var(--lp-mute)] font-mono gap-2",
+  shell: "app-shell-bg min-h-svh text-foreground",
+  userLabel: "mb-2 truncate px-2 text-xs font-mono text-[var(--lp-mute)]",
   logoutBtn:
-    "w-full justify-start gap-2 text-muted-foreground hover:text-foreground",
-  logoutIcon: "size-4",
+  "w-full justify-start gap-2 rounded-xl text-xs text-[var(--lp-mute)] hover:bg-white/[0.06] hover:text-white transition-colors",
+  logoutIcon: "size-3.5 text-[var(--lp-mute)]",
 } as const;
 
 function DashboardPage() {
@@ -47,7 +47,12 @@ function DashboardPage() {
   }
 
   if (!isAuthenticated || !sessionToken) {
-    return <div className={styles.loadingShell}>Checking session...</div>;
+    return (
+      <div className={styles.loadingShell}>
+        <LoaderCircle className="size-4 animate-spin text-[rgb(var(--lp-green))]" />
+        Checking session...
+      </div>
+    );
   }
 
   return (

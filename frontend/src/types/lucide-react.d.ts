@@ -57,4 +57,29 @@ declare module "lucide-react" {
   export const Compass: Icon;
   export const Play: Icon;
   export const RotateCcw: Icon;
+
+  // added for the landing page
+  export const ArrowUpRight: Icon;
+  export const ArrowDownRight: Icon;
+  export const Brain: Icon;
+  export const Fingerprint: Icon;
+  export const Globe: Icon;
+  export const Globe2: Icon;
+  export const KeyRound: Icon;
+  export const Network: Icon;
+  export const Plus: Icon;
+  export const Radio: Icon;
+  export const Route: Icon;
+  export const ScanSearch: Icon;
+  export const ShieldAlert: Icon;
+  export const ShieldX: Icon;
+  export const Timer: Icon;
+  export const CircleCheck: Icon;
+  export const CircleAlert: Icon;
+  export const TriangleAlert: Icon;
+  export const Gauge: Icon;
+  export const Mail: Icon;
+  export const GitBranch: Icon;
+  export const Minus: Icon;
+  export const Github: Icon;
 }

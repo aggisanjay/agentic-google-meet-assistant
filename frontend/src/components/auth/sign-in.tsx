@@ -10,6 +10,7 @@ function SignInComponent() {
     <div className="descope-wrap">
       <Descope
         flowId="sign-up-or-in"
+        theme="dark"
         autoFocus="skipFirstScreen"
         redirectAfterSuccess="/dashboard"
         onSuccess={() => router.replace("/dashboard")}

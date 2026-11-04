@@ -1,14 +1,9 @@
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import "@fontsource-variable/geist";
+import "@fontsource-variable/geist-mono";
 import "./globals.css";
 import { AuthProvider } from "@descope/nextjs-sdk";
 import { cn } from "@/lib/utils";
-
-const sans = Plus_Jakarta_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-sans",
-});
 
 export const metadata: Metadata = {
   title: "Agentic Meet | AI Calendar & Meeting Assistant",
@@ -37,11 +32,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       sessionTokenViaCookie={cookieOptions}
       refreshTokenViaCookie={cookieOptions}
     >
-      <html lang="en" className={cn(sans.variable, "font-sans")}>
-        <body className="min-h-svh bg-background font-sans text-foreground antialiased selection:bg-emerald-500/20 selection:text-emerald-900">
-          {children}
-        </body>
-      </html>
-    </AuthProvider>
-  );
+          <html lang="en" className={cn("dark font-sans")}>
+            <body className="min-h-svh bg-background font-sans text-foreground antialiased selection:bg-[#2bd98a]/25 selection:text-white">
+              {children}
+            </body>
+          </html>
+        </AuthProvider>
+        );
 }

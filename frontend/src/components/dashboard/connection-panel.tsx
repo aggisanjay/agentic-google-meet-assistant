@@ -13,22 +13,24 @@ import {
 } from "@/lib/connections";
 
 const styles = {
-  root: "space-y-1.5",
-  title: "px-0.5 text-sm font-semibold text-sidebar-foreground",
-  error: "text-xs text-destructive",
-  skeleton: "h-11 w-full rounded-xl",
-  row: "flex items-center gap-2 rounded-xl bg-sidebar-accent/50 px-2 py-2",
-  iconBox: "flex size-8 shrink-0 items-center justify-center rounded-lg",
-  iconBoxConnected: "bg-primary text-primary-foreground",
-  iconBoxDisconnected: "bg-card text-muted-foreground ring-1 ring-border",
+  root: "space-y-2",
+  title: "px-1 text-[11px] font-mono font-medium uppercase tracking-[0.16em] text-[var(--lp-mute)]",
+  error: "text-xs text-[rgb(var(--lp-red))]",
+  skeleton: "h-12 w-full rounded-xl bg-white/[0.04]",
+  row: "flex items-center gap-2.5 rounded-xl border hairline bg-white/[0.03] px-3 py-2.5 transition-all hover:bg-white/[0.05]",
+  iconBox: "flex size-8 shrink-0 items-center justify-center rounded-lg text-xs",
+  iconBoxConnected: "bg-[rgb(var(--lp-green))]/15 text-[rgb(var(--lp-green))] border border-[rgb(var(--lp-green))]/30",
+  iconBoxDisconnected: "bg-white/[0.04] text-[var(--lp-mute)] border hairline",
   icon: "size-4",
   meta: "min-w-0 flex-1",
-  label: "truncate text-sm font-semibold leading-tight",
-  status: "mt-0.5 text-xs font-medium",
-  statusConnected: "text-primary",
-  statusDisconnected: "text-muted-foreground",
-  actionBtn: "h-8 shrink-0 px-2.5",
-  refreshBtn: "shrink-0",
+  label: "truncate text-[13px] font-medium text-white leading-tight",
+  status: "mt-0.5 text-[11px] font-mono",
+  statusConnected: "text-[rgb(var(--lp-green))]",
+  statusDisconnected: "text-[var(--lp-mute)]",
+  actionBtn: "h-7 shrink-0 rounded-full px-3 text-[11.5px] font-medium transition-all active:scale-95",
+  actionBtnConnected: "border hairline text-[var(--lp-mute)] hover:text-white hover:bg-white/[0.06]",
+  actionBtnDisconnected: "bg-[rgb(var(--lp-green))] text-[#04130b] hover:brightness-110 font-semibold shadow-xs",
+  refreshBtn: "size-7 shrink-0 rounded-lg text-[var(--lp-mute)] hover:text-white hover:bg-white/[0.06] transition-colors",
   refreshIcon: "size-3.5",
 } as const;
 
@@ -116,8 +118,11 @@ function ConnectionsPanel({ sessionToken }: { sessionToken: string }) {
           </div>
           <Button
             size="sm"
-            variant={connected ? "ghost" : "default"}
-            className={styles.actionBtn}
+            variant="ghost"
+            className={cn(
+              styles.actionBtn,
+              connected ? styles.actionBtnConnected : styles.actionBtnDisconnected,
+            )}
             disabled={busy}
             onClick={() => handleCalendarConnect()}
           >
@@ -126,12 +131,13 @@ function ConnectionsPanel({ sessionToken }: { sessionToken: string }) {
 
           <Button
             size="icon-sm"
-            variant={"ghost"}
+            variant="ghost"
             className={styles.refreshBtn}
             disabled={busy}
             onClick={() => handleCalendarRefresh()}
+            title="Refresh connection status"
           >
-            <RefreshCcw className={styles.refreshIcon} />
+            <RefreshCcw className={cn(styles.refreshIcon, busy && "animate-spin")} />
           </Button>
         </div>
       )}
